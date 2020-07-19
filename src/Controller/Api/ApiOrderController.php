@@ -116,13 +116,35 @@ class ApiOrderController extends AbstractController
     }
 
     /**
-     * @Route("/{id}}", name="api_order_detail",  methods={"POST"})
+     * @Route("/{id}", name="api_order_detail",  methods={"GET"})
      * @param Request $request
-     * @return JsonResponse|\Symfony\Component\HttpFoundation\RedirectResponse
+     * @return JsonResponse|\Symfony\Component\HttpFoundation\RedirectResponse|Response
      */
     public function detail(Request $request)
     {
-        return JsonResponse::create("detail");
+
+        $repository = $this->getDoctrine()->getRepository(Order::class);
+        $current_user = $this->getUser();
+
+        $userId = $current_user->getId();
+        $orders = $repository->find($request->get("id"));
+        if ($orders->getUserId() != $userId) {
+            $order = json_encode([
+                "resultCode" => -1,
+                "resultMessage" => "Bu Siparişi Görmeye Yetkili Değilsiniz."
+            ]);
+            $response = $this->get('serializer')->serialize($order, 'json');
+            $response = new Response(json_decode($response));
+            $response->headers->set('Content-Type', 'application/json');
+            return $response;
+        }
+        $orders = $this->get('serializer')->serialize($orders, 'json');
+
+        $response = new Response($orders);
+
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
 
     }
 
